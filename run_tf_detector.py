@@ -40,6 +40,7 @@ import glob
 import os
 import sys
 import time
+from tokenize import String
 
 import PIL
 from PIL import ImageFont, ImageDraw
@@ -192,7 +193,7 @@ def generate_detections(detection_graph,images):
 
                 boxes.append(box)
                 scores.append(score)
-                classes.append(clss)
+                classes.append(clss) 
             
                 if iImage == 0:
                     first_image_complete_time = time.time()
@@ -586,8 +587,17 @@ def render_bounding_boxes(boxes, scores, classes, input_file_names, output_file_
             output_file_name = output_file_names[iImage]
 
         if len(output_file_name) == 0:
+            # get the name of the file to be saved in the new directory
             name, ext = os.path.splitext(input_file_name)
-            output_file_name = "{}{}{}".format(name,DETECTION_FILENAME_INSERT,ext)
+
+            splitName = os.path.basename(name)
+            
+            splitName = "Animal_Detections/" + splitName 
+
+            output_file_name = "{}{}{}".format(splitName,DETECTION_FILENAME_INSERT,ext)
+
+            
+            
 
         image = PIL.Image.open(input_file_name).convert("RGB")
         detections = []
@@ -626,7 +636,17 @@ def render_bounding_boxes(boxes, scores, classes, input_file_names, output_file_
                                     confidence_threshold=confidence_threshold, 
                                     thickness=linewidth,
                                     label_map=bbox_category_str_id_to_name)
-        image.save(output_file_name)
+                                    
+       
+        # Check through all detections and check for those that are of animals or groups (of animals)
+        for detection in detections:
+                   
+            if (detection['category'] == "1" or detection['category'] == "3"):
+                if detection['conf'] >= 0.3:
+                    # save image with animals detected and confidence is greater than 30%
+                    image.save(output_file_name)
+                    break
+
         
     # ...for each image
     
@@ -812,7 +832,17 @@ def main():
     # Hack to avoid running on already-detected images
     image_file_names = [x for x in image_file_names if DETECTION_FILENAME_INSERT not in x]
                 
-    print('Running detector on {} images'.format(len(image_file_names)))    
+    print('Running detector on {} images'.format(len(image_file_names))) 
+
+    # create a new directory in the current directory to save the images with animals    
+    newDirPath = os.getcwd() + "/Animal_Detections"
+
+    try:
+        os.mkdir(newDirPath)
+    except:
+        print("Output folder already created")
+        
+
     
     load_and_run_detector(model_file=args.detectorFile, image_file_names=image_file_names, 
                           confidence_threshold=args.threshold, output_dir=args.outputDir)
